@@ -1,0 +1,39 @@
+plugins {
+    id 'gov.raptor.gradle.plugins.build-support' version '8.6.0'
+}
+
+group = "gov.takx.plugins" // TODO: change if desired
+description = "Live physiology dashboard and CSV data logging for TAKX"
+
+// Configure the repositories in use for dependency resolution and publishing. Note that each developer has to add both
+// takRepoUsername and takRepoPassword to the Gradle credential store before building.
+//
+// See https://wiki.tak.gov/display/DEV/Building+TAKX+Plugins for more details.
+buildSupport.repoManagement {
+    // Publish when running on GitLab CI, for release builds, or when forced
+    final boolean shouldPublish = isRelease || runningUnderGitlab || isForcePublish
+    takx publish: shouldPublish
+}
+
+buildSupport.configureStandardPlugin(project, true, true) // Apply standard plugin project setup
+
+dependencies {
+    // This BOM defines the modules that TAKX can provide at runtime via @LibraryDependency annotations
+    implementation platform("gov.takx:platform-bom:$platformVersion")
+
+    // This library defines the TAKX API
+    implementation "gov.takx:platform:$platformVersion"
+
+    testImplementation "gov.takx:test:$platformVersion"
+    testImplementation platform("gov.takx:test-bom:$platformVersion")
+    testImplementation "org.assertj:assertj-core"
+}
+
+// Instruct Gradle on which version to use for the Gradle wrapper.  For more info on using the Gradle wrapper, see
+// https://docs.gradle.org/3.3/userguide/gradle_wrapper.html
+wrapper {
+    gradleVersion = "7.6.4"
+    distributionType = Wrapper.DistributionType.ALL
+}
+
+test.useJUnitPlatform()

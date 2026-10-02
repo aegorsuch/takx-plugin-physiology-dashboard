@@ -1,0 +1,85 @@
+TAKX Physiology Dashboard Plugin
+================================
+
+TAKX application plugin for live wearable biometrics, alert history and physiological CSV logging.
+
+**Readme Contents**
+- [Sample usage](#sample-usage)
+- [Build instructions](#build-instructions)
+- [Change log](#change-log)
+- [Contact](#contact)
+- [Adding external libraries](#adding-external-libraries)
+- [Using CDI](#using-cdi)
+
+
+Sample usage
+------------
+Install and start the **Physiology Dashboard** application plugin in TAKX. Its panel opens on the right and listens for incoming CoT events with a `<biometrics>` detail. The dashboard shows devices by callsign, model, heart rate, skin temperature (F), exertion, battery, calories, HRLV, VO2, HRV and sensor-fit warning. Select a device to see up to ten recent alert/clear events. Alerts are color-coded; devices appear disconnected after their CoT stale time and disappear 30 seconds later. Use the sort selector for callsign, heart rate, battery or exertion order.
+
+Click **Start logging** to record each received biometric sample. Click **Stop logging** to finish the CSV and display its full path in the field above the dashboard. Logs are stored in `~/TAKX/physio-logs` (on Windows, under the current user's home directory); stopping the plugin also finishes an active log. The CSV contains UTC collection time, callsign, heart rate (bpm), skin temperature (F) and exertion (%). There is no automatic mission-package send in this desktop port; share the saved CSV separately.
+
+The plugin receives biometric device data from CoT; it does not connect to wearables directly or expose a public API to other plugins.
+
+
+Build instructions
+------------------
+See [Building TAKX Plugins](https://wiki.tak.gov/display/DEV/Building+TAKX+Plugins) for detailed instructions on building this repo, including:
+
+- Setting `takRepoUsername` and `takRepoPassword` in the Gradle credential store using the [GradleCredentialsSetup](https://git.tak.gov/raptor/takx-support/gradle-credentials-setup) repo
+- Configuring the install location using the `ORG_GRADLE_PROJECT_pluginInstallDir` environment variable
+- Building and installing with `.\gradlew.bat install` on Windows (or `./gradlew install` on Unix-like systems)
+
+This project targets TAKX `5.8.0` (`platformVersion.txt`) and starts at plugin version `0.1.0-SNAPSHOT` (`projectVersion.txt`). It uses the Gradle 7.6.4 wrapper and requires Java 17. Reload the Gradle project in your IDE after changing the build configuration.
+
+
+Change log
+----------
+- **0.1.0-SNAPSHOT**: TAKX dashboard for incoming biometric CoT data, alerts, sorting, stale-device status and CSV logging
+
+
+Contact
+-------
+takx@tak.gov
+
+
+Adding external libraries
+-------------------------
+
+Declaring an external dependency alone does not package it with the plugin. To bundle a library in the plugin JAR's `/lib` directory, configure `includeInJar` in `build.gradle` and add the dependency to that configuration:
+
+```groovy
+buildSupport.configureIncludeInJar(project)
+
+dependencies {
+    includeInJar group: 'org.jfree', name: 'jfreechart', version: '1.5.4'
+}
+```
+
+The example library is not currently a dependency of this project. Add it only if the plugin uses it.
+
+Using CDI
+---------
+
+Annotate a component with `@ApplicationScoped` to make it available for injection. Annotate a class that receives injected values with `@PseudoBean`:
+
+```java
+@ApplicationScoped
+public class ManagerA {
+    public void doAThing() {
+        // Component behavior goes here.
+    }
+}
+
+@PseudoBean
+public class PanelB extends JPanel {
+    @Inject
+    private ManagerA manager;
+
+    @PostConstruct
+    private void postConstruct() {
+        manager.doAThing();
+    }
+}
+```
+
+Injected fields are populated after construction, so use `@PostConstruct` rather than the constructor if initialization needs an injected value.
