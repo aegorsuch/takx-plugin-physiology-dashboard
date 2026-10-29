@@ -29,7 +29,7 @@ class PhysioCsvLoggerTest {
             assertThat(Files.readAllLines(completed)).isEqualTo(List.of(
                     "collected_at_utc,callsign,heart_rate_bpm,skin_temp_f,exertion_percent",
                     "1970-01-01T00:00:00.000Z,\"Team, \"\"One\"\"\",72.0,98.6,25.0",
-                    "1970-01-01T00:00:01.000Z,Another,,,,"));
+                    "1970-01-01T00:00:01.000Z,Another,,,"));
         } finally {
             logger.shutdown().join();
         }
