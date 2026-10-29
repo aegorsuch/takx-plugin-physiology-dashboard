@@ -6,6 +6,7 @@ TAKX application plugin for live wearable biometrics, alert history and physiolo
 **Readme Contents**
 - [Sample usage](#sample-usage)
 - [Build instructions](#build-instructions)
+- [Forge CI and personal GitHub publication](#forge-ci-and-personal-github-publication)
 - [Change log](#change-log)
 - [Contact](#contact)
 - [Adding external libraries](#adding-external-libraries)
@@ -32,6 +33,26 @@ See [Building TAKX Plugins](https://wiki.tak.gov/display/DEV/Building+TAKX+Plugi
 - Building and installing with `.\gradlew.bat install` on Windows (or `./gradlew install` on Unix-like systems)
 
 This project targets TAKX `5.8.0` (`platformVersion.txt`) and starts at plugin version `0.1.0-SNAPSHOT` (`projectVersion.txt`). It uses the Gradle 7.6.4 wrapper and requires Java 17. Reload the Gradle project in your IDE after changing the build configuration.
+
+Forge CI and personal GitHub publication
+---------------------------------------
+Canonical source is [Forge project 6850](https://git.tak.gov/raptor/takx-plugins/takx-plugin-physiology-dashboard), branch `main`. The personal mirror is [aegorsuch/takx-plugin-physiology-dashboard](https://github.com/aegorsuch/takx-plugin-physiology-dashboard). This is a desktop TAKX plugin, not an Android APK. Build-support `release-8.6.0` implements native installation by copying the `jar` task output into the TAKX plugins directory.
+
+`.gitlab-ci.yml` runs for pushes or manually started pipelines on canonical Forge `main`, and for merge requests targeting canonical `main`. It tests the publication gate, then runs `clean check assemble` using Java 17 and retains `build/libs/` for seven days after success. These files are **unverified build outputs**, not approved GitHub release assets. No dependency credentials are provisioned by this pipeline: use the existing authorized runner/Gradle credential setup described above. Credential failures must remain failures.
+
+Do not replace this command with `build` or `install` for verification: build-support finalizes `build` with native `publish`; `install` also depends on `build`. Existing Gradle repository and package-publishing configuration is unchanged. The new verification job neither invokes those tasks nor signs, installs or publishes packages.
+
+**GitHub publication is intentionally blocked, not implemented.** After a successful `main` build, the blocking manual `personal-github-release` job runs `ci/personal_release_gate.py`, which always exits with status 2 and explains the missing evidence. The main pipeline remains blocked at that manual job; merge request pipelines cannot run it. No token, environment flag or destination override enables publication; no network writes occur. Do not configure a GitHub publishing token for this gate.
+
+Before replacing the gate with a publisher, verify the exact native distributable, manifest, bundled dependencies and TAKX installation compatibility on a credentialed Forge build. Record its SHA-256 together with canonical commit, pipeline and producing job; recheck the downloaded bytes before upload. Implement the established fixed-tag rolling-release pattern only for the personal destination above, with managed-release ownership checks, protected-main validation, serialized updates, stale-pipeline rejection and refusal to overwrite unknown releases, tags or refs. Do not publish to a company repository or invent signing credentials.
+
+Inspection on 2026-10-29 found no `.gitlab-ci.yml`, an empty project `ci_config_path`, no main pipeline history and no visible Maven packages. Variable access returned 403, mirror access 401 and policy endpoints 404; hidden or inherited policies could not be verified and require maintainer review. Local Gradle configuration stopped before task discovery/compilation with `No username configured for repo null/tak`; no distributable, hash or build provenance was validated.
+
+Run gate tests without Gradle credentials:
+
+```powershell
+python -m unittest discover -s ci -p "test_*.py" -v
+```
 
 
 Change log
