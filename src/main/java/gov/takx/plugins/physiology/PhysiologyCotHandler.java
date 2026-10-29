@@ -12,34 +12,51 @@ import java.time.Instant;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-final class BiometricsCotHandler extends CotDetailHandler {
-    private static final Logger logger = LoggerFactory.getLogger(BiometricsCotHandler.class);
+final class PhysiologyCotHandler extends CotDetailHandler {
+    private static final Logger logger = LoggerFactory.getLogger(PhysiologyCotHandler.class);
+    private final boolean legacy;
     private final Consumer<BiometricReading> onReading;
     private final BiConsumer<String, DeviceSnapshot.Alert> onAlert;
 
-    BiometricsCotHandler(Consumer<BiometricReading> onReading,
+    PhysiologyCotHandler(Consumer<BiometricReading> onReading,
                          BiConsumer<String, DeviceSnapshot.Alert> onAlert) {
-        super("biometrics");
+        this("physiology", onReading, onAlert);
+    }
+
+    static PhysiologyCotHandler legacy(Consumer<BiometricReading> onReading,
+                                       BiConsumer<String, DeviceSnapshot.Alert> onAlert) {
+        return new PhysiologyCotHandler("biometrics", onReading, onAlert);
+    }
+
+    private PhysiologyCotHandler(String detailName, Consumer<BiometricReading> onReading,
+                                 BiConsumer<String, DeviceSnapshot.Alert> onAlert) {
+        super(detailName);
+        legacy = "biometrics".equals(detailName);
         this.onReading = onReading;
         this.onAlert = onAlert;
     }
 
     @Override
-    public ImportResult toItemMetadata(MapItem item, CotEvent event, CotDetail biometrics) {
-        if (biometrics.getAttribute("alertState") != null) {
-            CotDetail device = biometrics.getFirstChildByName("device");
+    public ImportResult toItemMetadata(MapItem item, CotEvent event, CotDetail physiology) {
+        CotDetail primary = legacy && event != null && event.getDetail() != null
+                ? event.getDetail().getFirstChildByName("physiology") : null;
+        if (physiology.getAttribute("alertState") != null) {
+            if (primary != null && primary.getAttribute("alertState") != null) {
+                return ImportResult.SUCCESS;
+            }
+            CotDetail device = physiology.getFirstChildByName("device");
             String uid = childValue(device, "uid");
             if (blank(uid)) {
                 logger.warn("Ignoring physiological alert without a device UID");
                 return ImportResult.FAILURE;
             }
-            String state = biometrics.getAttribute("alertState");
+            String state = physiology.getAttribute("alertState");
             boolean active = !"CANCEL".equalsIgnoreCase(state);
-            String category = biometrics.getAttribute("alertCategory");
+            String category = physiology.getAttribute("alertCategory");
             if (blank(category)) {
-                category = biometrics.getAttribute("alertDescription");
+                category = physiology.getAttribute("alertDescription");
             }
-            String priority = biometrics.getAttribute("alertPriority");
+            String priority = physiology.getAttribute("alertPriority");
             DeviceSnapshot.Severity severity = "1".equals(priority) ? DeviceSnapshot.Severity.HIGH
                     : "2".equals(priority) || "3".equals(priority) ? DeviceSnapshot.Severity.LOW
                     : DeviceSnapshot.Severity.NONE;
@@ -47,16 +64,21 @@ final class BiometricsCotHandler extends CotDetailHandler {
             return ImportResult.SUCCESS;
         }
 
-        CotDetail device = biometrics.getFirstChildByName("device");
+        // Alert handling stays independent of legacy reading suppression.
+        if (primary != null) {
+            return ImportResult.SUCCESS;
+        }
+
+        CotDetail device = physiology.getFirstChildByName("device");
         if (device == null || event == null || blank(event.getUID())) {
-            logger.warn("Ignoring incomplete biometrics CoT event");
+            logger.warn("Ignoring incomplete physiology CoT event");
             return ImportResult.FAILURE;
         }
         String serial = childValue(device, "uid");
         String model = childValue(device, "model");
         String heartRate = childValue(device, "hr");
         if (blank(serial) || blank(model) || blank(heartRate)) {
-            logger.warn("Ignoring biometrics event without device UID, model or heart rate");
+            logger.warn("Ignoring physiology event without device UID, model or heart rate");
             return ImportResult.FAILURE;
         }
         CotDetail root = event.getDetail();
@@ -76,15 +98,15 @@ final class BiometricsCotHandler extends CotDetailHandler {
                 : Instant.ofEpochMilli(event.getStale().getMilliseconds());
         onReading.accept(new BiometricReading(
                 event.getUID(), callsign, model, serial,
-                Boolean.parseBoolean(biometrics.getAttribute("isFalsePositive")),
+                Boolean.parseBoolean(physiology.getAttribute("isFalsePositive")),
                 number(heartRate, "hr"), number(childValue(device, "skt"), "skt"),
                 number(childValue(device, "exert"), "exert"), number(battery, "battery"),
-                number(biometrics.getAttribute("hssi"), "hssi"),
-                number(biometrics.getAttribute("cadence"), "cadence"),
-                number(biometrics.getAttribute("caloricBurnRate"), "caloricBurnRate"),
-                number(biometrics.getAttribute("hrlv"), "hrlv"),
-                number(biometrics.getAttribute("vo2"), "vo2"),
-                number(biometrics.getAttribute("hrv"), "hrv"), staleAt, receivedAt));
+                number(physiology.getAttribute("hssi"), "hssi"),
+                number(physiology.getAttribute("cadence"), "cadence"),
+                number(physiology.getAttribute("caloricBurnRate"), "caloricBurnRate"),
+                number(physiology.getAttribute("hrlv"), "hrlv"),
+                number(physiology.getAttribute("vo2"), "vo2"),
+                number(physiology.getAttribute("hrv"), "hrv"), staleAt, receivedAt));
         return ImportResult.SUCCESS;
     }
 

@@ -36,7 +36,8 @@ public class PhysiologyDashboardPlugin extends AAppPlugin {
     private final DeviceStore devices = new DeviceStore();
     private final PhysioCsvLogger csv = new PhysioCsvLogger(Path.of(
             System.getProperty("user.home"), "TAKX", "physio-logs"));
-    private final BiometricsCotHandler handler = new BiometricsCotHandler(this::onReading, this::onAlert);
+    private final PhysiologyCotHandler handler = new PhysiologyCotHandler(this::onReading, this::onAlert);
+    private final PhysiologyCotHandler legacyHandler = PhysiologyCotHandler.legacy(this::onReading, this::onAlert);
     private volatile boolean started;
     private PhysiologyPanel panel;
 
@@ -56,6 +57,7 @@ public class PhysiologyDashboardPlugin extends AAppPlugin {
         delegate.getUISpaceManager().addComponent(descriptor, panel);
         started = true;
         cotDetails.registerHandler(handler);
+        cotDetails.registerHandler(legacyHandler);
         delegate.getUISpaceManager().showComponent(panel);
     }
 
@@ -64,6 +66,7 @@ public class PhysiologyDashboardPlugin extends AAppPlugin {
     public void stop() {
         started = false;
         cotDetails.unregisterHandler(handler);
+        cotDetails.unregisterHandler(legacyHandler);
         if (csv.isRecording()) {
             csv.stop().whenComplete((file, error) -> {
                 if (error == null) {
