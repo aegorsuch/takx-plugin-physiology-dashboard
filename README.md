@@ -139,4 +139,6 @@ Injected fields are populated after construction, so use `@PostConstruct` rather
 
 ## License
 
-No license file or explicit license declaration was found in the canonical repository at this revision. Licensing terms are unverified; confirm them with the maintainer before redistribution. This README reformat does not grant a license or change existing rights.
+The user's original code in this repository is licensed under the GNU General Public License, version 3 or (at your option) any later version (`GPL-3.0-or-later`). See [LICENSE](LICENSE) for the complete license text.
+
+Third-party components retain their own licenses and are not relicensed by this declaration. The Gradle wrapper scripts (`gradlew` and `gradlew.bat`) retain their existing Apache License 2.0 copyright and license notices; the bundled Gradle wrapper and external dependencies remain subject to their respective terms. Existing attribution and rights notices remain unchanged.
