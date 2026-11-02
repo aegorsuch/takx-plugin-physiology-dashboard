@@ -4,17 +4,27 @@ TAKX Physiology Dashboard Plugin
 TAKX application plugin for live wearable biometrics, alert history and physiological CSV logging.
 
 **Readme Contents**
-- [Sample usage](#sample-usage)
-- [Build instructions](#build-instructions)
-- [Forge CI and personal GitHub publication](#forge-ci-and-personal-github-publication)
-- [Change log](#change-log)
-- [Contact](#contact)
-- [Adding external libraries](#adding-external-libraries)
-- [Using CDI](#using-cdi)
+- [Purpose and Capabilities](#purpose-and-capabilities)
+  - [Sample usage](#sample-usage)
+- [Status](#status)
+  - [Change log](#change-log)
+- [Point of Contacts](#point-of-contacts)
+  - [Contact](#contact)
+- [Ports Required](#ports-required)
+- [Equipment Required](#equipment-required)
+- [Equipment Supported](#equipment-supported)
+- [Compilation](#compilation)
+  - [Build instructions](#build-instructions)
+  - [Forge CI and personal GitHub publication](#forge-ci-and-personal-github-publication)
+- [Developer Notes](#developer-notes)
+  - [Adding external libraries](#adding-external-libraries)
+  - [Using CDI](#using-cdi)
+- [License](#license)
 
+## Purpose and Capabilities
 
-Sample usage
-------------
+### Sample usage
+
 Install and start the **Physiology Dashboard** application plugin in TAKX. Its panel opens on the right and listens for incoming CoT events with a `<physiology>` detail. The dashboard shows devices by callsign, model, heart rate, skin temperature (F), exertion, battery, calories, HRLV, VO2, HRV and sensor-fit warning. Select a device to see up to ten recent alert/clear events. Alerts are color-coded; devices appear disconnected after their CoT stale time and disappear 30 seconds later. Use the sort selector for callsign, heart rate, battery or exertion order.
 
 WearTAK physiological PLI now uses `<detail><physiology><device>...</device></physiology></detail>`. Alert/cancel metadata also uses `<physiology alertState="..." ...>`. Only the tag changes; device children, alert attributes and values are unchanged. During transition, legacy `<biometrics><device>...</device></biometrics>` readings remain supported only when the event has no `<physiology>` detail, preventing duplicate dashboard updates and CSV rows. Legacy `<biometrics alertState="..." ...>` alerts/cancels remain supported unless the event also contains a `<physiology>` alert/cancel, which takes precedence regardless of handler order. A legacy alert alongside a primary physiology reading still updates alert history independently.
@@ -24,8 +34,38 @@ Click **Start logging** to record each received biometric sample. Click **Stop l
 The plugin receives biometric device data from CoT; it does not connect to wearables directly or expose a public API to other plugins.
 
 
-Build instructions
-------------------
+## Status
+
+The repository declares plugin version `0.1.0-SNAPSHOT`, targeting TAKX `5.8.0`. Deployment readiness and a validated native distributable are not established; GitHub publication remains intentionally blocked as described below.
+
+### Change log
+
+- **0.1.0-SNAPSHOT**: TAKX dashboard for incoming biometric CoT data, alerts, sorting, stale-device status and CSV logging
+
+## Point of Contacts
+
+### Contact
+
+takx@tak.gov
+
+This is the existing repository contact. A plugin-specific maintainer is not identified in the repository.
+
+## Ports Required
+
+The plugin registers CoT detail handlers with TAKX and does not open its own network listener or directly connect to wearables. CoT transport and ports depend on the host TAKX configuration; deployment-specific port requirements are not documented here.
+
+## Equipment Required
+
+A desktop capable of running TAKX `5.8.0`, with the plugin installed and an incoming source of physiological CoT data. CSV logging requires writable storage under the current user's home directory. Development requires the Java and Gradle setup described in [Compilation](#compilation). Minimum desktop hardware specifications are not documented in this repository.
+
+## Equipment Supported
+
+The plugin consumes physiological CoT data rather than interfacing directly with wearable hardware. It supports the current `<physiology>` detail and the legacy `<biometrics>` fallback described in [Sample usage](#sample-usage). A validated wearable/device or desktop operating-system compatibility matrix is not provided in this repository.
+
+## Compilation
+
+### Build instructions
+
 See [Building TAKX Plugins](https://wiki.tak.gov/display/DEV/Building+TAKX+Plugins) for detailed instructions on building this repo, including:
 
 - Setting `takRepoUsername` and `takRepoPassword` in the Gradle credential store using the [GradleCredentialsSetup](https://git.tak.gov/raptor/takx-support/gradle-credentials-setup) repo
@@ -34,8 +74,8 @@ See [Building TAKX Plugins](https://wiki.tak.gov/display/DEV/Building+TAKX+Plugi
 
 This project targets TAKX `5.8.0` (`platformVersion.txt`) and starts at plugin version `0.1.0-SNAPSHOT` (`projectVersion.txt`). It uses the Gradle 7.6.4 wrapper and requires Java 17. Reload the Gradle project in your IDE after changing the build configuration.
 
-Forge CI and personal GitHub publication
----------------------------------------
+### Forge CI and personal GitHub publication
+
 Canonical source is [Forge project 6850](https://git.tak.gov/raptor/takx-plugins/takx-plugin-physiology-dashboard), branch `main`. The personal mirror is [aegorsuch/takx-plugin-physiology-dashboard](https://github.com/aegorsuch/takx-plugin-physiology-dashboard). This is a desktop TAKX plugin, not an Android APK. Build-support `release-8.6.0` implements native installation by copying the `jar` task output into the TAKX plugins directory.
 
 `.gitlab-ci.yml` runs for pushes or manually started pipelines on canonical Forge `main`, and for merge requests targeting canonical `main`. It tests the publication gate, then runs `clean check assemble` using Java 17 and retains `build/libs/` for seven days after success. These files are **unverified build outputs**, not approved GitHub release assets. No dependency credentials are provisioned by this pipeline: use the existing authorized runner/Gradle credential setup described above. Credential failures must remain failures.
@@ -55,18 +95,9 @@ python -m unittest discover -s ci -p "test_*.py" -v
 ```
 
 
-Change log
-----------
-- **0.1.0-SNAPSHOT**: TAKX dashboard for incoming biometric CoT data, alerts, sorting, stale-device status and CSV logging
+## Developer Notes
 
-
-Contact
--------
-takx@tak.gov
-
-
-Adding external libraries
--------------------------
+### Adding external libraries
 
 Declaring an external dependency alone does not package it with the plugin. To bundle a library in the plugin JAR's `/lib` directory, configure `includeInJar` in `build.gradle` and add the dependency to that configuration:
 
@@ -80,8 +111,7 @@ dependencies {
 
 The example library is not currently a dependency of this project. Add it only if the plugin uses it.
 
-Using CDI
----------
+### Using CDI
 
 Annotate a component with `@ApplicationScoped` to make it available for injection. Annotate a class that receives injected values with `@PseudoBean`:
 
@@ -106,3 +136,9 @@ public class PanelB extends JPanel {
 ```
 
 Injected fields are populated after construction, so use `@PostConstruct` rather than the constructor if initialization needs an injected value.
+
+## License
+
+The user's original code in this repository is licensed under the GNU General Public License, version 3 or (at your option) any later version (`GPL-3.0-or-later`). See [LICENSE](LICENSE) for the complete license text.
+
+Third-party components retain their own licenses and are not relicensed by this declaration. The Gradle wrapper scripts (`gradlew` and `gradlew.bat`) retain their existing Apache License 2.0 copyright and license notices; the bundled Gradle wrapper and external dependencies remain subject to their respective terms. Existing attribution and rights notices remain unchanged.
